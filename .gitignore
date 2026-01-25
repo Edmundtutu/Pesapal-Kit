@@ -1,0 +1,23 @@
+# Environment files (contains secrets)
+.env
+
+# Composer dependencies
+/vendor/
+vendor/*
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+ipn_log.txt
+
+# Cache
+*.cache

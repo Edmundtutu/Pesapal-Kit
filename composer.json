@@ -1,0 +1,20 @@
+{
+  "name": "nyash/pesapal-cookout",
+  "autoload": {
+    "psr-4": {
+      "Edtutu\\PesaPalToLife\\": "src/"
+    },
+    "files": [
+      "src/helpers.php"
+    ]
+  },
+  "authors": [
+    {
+      "name": "edtutu",
+      "email": "survtechke@gmail.com"
+    }
+  ],
+  "require": {
+    "guzzlehttp/guzzle": "^7.7"
+  }
+}

@@ -1,0 +1,884 @@
+{
+	"info": {
+		"_postman_id": "pesapal-to-life-api-collection",
+		"name": "Pesapal API 3.0 - To Life Collection",
+		"description": "Complete Postman collection for testing Pesapal Payment Gateway API 3.0 integration.\n\nThis collection includes all available endpoints:\n- Authentication\n- IPN Registration & Management\n- Order Submission (Standard & Recurring)\n- Transaction Status\n- Refund Requests\n- Order Cancellation\n\n## Setup Instructions\n\n1. Import this collection into Postman\n2. Edit collection variables (click collection > Variables tab)\n3. Set your consumer_key and consumer_secret\n4. Set base_url to match your environment\n5. Run 'Get Auth Token' first - token auto-saves\n6. Test other endpoints\n\n## Collection Variables (Edit these!)\n\n- `base_url`: Sandbox: https://cybqa.pesapal.com/pesapalv3 | Live: https://pay.pesapal.com/v3\n- `consumer_key`: Your Pesapal consumer key\n- `consumer_secret`: Your Pesapal consumer secret\n- `auth_token`: Auto-populated after authentication\n- `ipn_id`: Auto-populated after IPN registration\n\n## IMPORTANT\n\nMake sure base_url matches your credentials:\n- Sandbox credentials -> use sandbox URL\n- Live credentials -> use live URL\n\nDefault values use Pesapal's public demo sandbox credentials.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Get Auth Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has token', function () {",
+									"    pm.expect(jsonData).to.have.property('token');",
+									"});",
+									"",
+									"// Save token to collection variables (works without environment)",
+									"if (jsonData.token) {",
+									"    pm.collectionVariables.set('auth_token', jsonData.token);",
+									"    console.log('Token saved to collection variables');",
+									"}",
+									"",
+									"pm.test('Token expiry date exists', function () {",
+									"    pm.expect(jsonData).to.have.property('expiryDate');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"consumer_key\": \"{{consumer_key}}\",\n    \"consumer_secret\": \"{{consumer_secret}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Auth/RequestToken",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Auth",
+								"RequestToken"
+							]
+						},
+						"description": "Authenticate with Pesapal API to get a bearer token.\n\nThe token is valid for 5 minutes and must be used for all subsequent API calls.\n\n**Required:**\n- consumer_key: Your Pesapal consumer key\n- consumer_secret: Your Pesapal consumer secret\n\n**Response:**\n- token: JWT bearer token\n- expiryDate: Token expiration timestamp (UTC)\n- status: Response status code"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"consumer_key\": \"your_consumer_key\",\n    \"consumer_secret\": \"your_consumer_secret\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/Auth/RequestToken",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"Auth",
+										"RequestToken"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"body": "{\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"expiryDate\": \"2026-01-24T12:00:00.000Z\",\n    \"error\": null,\n    \"status\": \"200\",\n    \"message\": \"Request processed successfully\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Authentication endpoints for obtaining API access tokens."
+		},
+		{
+			"name": "IPN Management",
+			"item": [
+				{
+					"name": "Register IPN URL",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has ipn_id', function () {",
+									"    pm.expect(jsonData).to.have.property('ipn_id');",
+									"});",
+									"",
+									"// Save IPN ID to environment",
+									"if (jsonData.ipn_id) {",
+									"    pm.collectionVariables.set('ipn_id', jsonData.ipn_id);",
+									"    console.log('IPN ID saved: ' + jsonData.ipn_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"url\": \"{{ipn_callback_url}}\",\n    \"ipn_notification_type\": \"POST\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/URLSetup/RegisterIPN",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"URLSetup",
+								"RegisterIPN"
+							]
+						},
+						"description": "Register an IPN (Instant Payment Notification) URL to receive payment status updates.\n\n**Required:**\n- url: Publicly accessible URL to receive notifications\n- ipn_notification_type: HTTP method (GET or POST)\n\n**Response:**\n- ipn_id: Unique identifier for this IPN registration (save this!)\n- url: Registered URL\n- notification_type: 0 (GET) or 1 (POST)\n- ipn_status: 1 (Active) or 0 (Inactive)"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"url\": \"https://example.com/ipn-handler\",\n    \"ipn_notification_type\": \"POST\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/URLSetup/RegisterIPN",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"URLSetup",
+										"RegisterIPN"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"body": "{\n    \"url\": \"https://example.com/ipn-handler\",\n    \"created_date\": \"2026-01-24T10:00:00.000Z\",\n    \"ipn_id\": \"84740ab4-3cd9-47da-8a4f-dd1db53494b5\",\n    \"notification_type\": 1,\n    \"ipn_notification_type_description\": \"POST\",\n    \"ipn_status\": 1,\n    \"ipn_status_description\": \"Active\",\n    \"error\": null,\n    \"status\": \"200\"\n}"
+						}
+					]
+				},
+				{
+					"name": "List Registered IPNs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is an array', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/URLSetup/GetIpnList",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"URLSetup",
+								"GetIpnList"
+							]
+						},
+						"description": "Retrieve a list of all registered IPN URLs for your merchant account.\n\n**Response:**\nArray of IPN objects containing:\n- ipn_id: Unique identifier\n- url: Registered URL\n- notification_type: HTTP method\n- ipn_status: Active/Inactive status"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/URLSetup/GetIpnList",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"URLSetup",
+										"GetIpnList"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"body": "[\n    {\n        \"url\": \"https://example.com/ipn-handler\",\n        \"created_date\": \"2026-01-24T10:00:00.000Z\",\n        \"ipn_id\": \"84740ab4-3cd9-47da-8a4f-dd1db53494b5\",\n        \"notification_type\": 1,\n        \"ipn_notification_type_description\": \"POST\",\n        \"ipn_status\": 1,\n        \"ipn_status_description\": \"Active\"\n    }\n]"
+						}
+					]
+				}
+			],
+			"description": "Endpoints for managing IPN (Instant Payment Notification) URLs."
+		},
+		{
+			"name": "Orders & Payments",
+			"item": [
+				{
+					"name": "Submit Order Request",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has order_tracking_id', function () {",
+									"    pm.expect(jsonData).to.have.property('order_tracking_id');",
+									"});",
+									"",
+									"pm.test('Response has redirect_url', function () {",
+									"    pm.expect(jsonData).to.have.property('redirect_url');",
+									"});",
+									"",
+									"// Save order tracking ID",
+									"if (jsonData.order_tracking_id) {",
+									"    pm.collectionVariables.set('order_tracking_id', jsonData.order_tracking_id);",
+									"    console.log('Order Tracking ID saved: ' + jsonData.order_tracking_id);",
+									"}",
+									"",
+									"// Save merchant reference",
+									"if (jsonData.merchant_reference) {",
+									"    pm.collectionVariables.set('merchant_reference', jsonData.merchant_reference);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate unique order ID",
+									"var orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();",
+									"pm.collectionVariables.set('order_id', orderId);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{order_id}}\",\n    \"currency\": \"KES\",\n    \"amount\": 100.00,\n    \"description\": \"Test Payment via Postman\",\n    \"callback_url\": \"{{callback_url}}\",\n    \"redirect_mode\": \"PARENT_WINDOW\",\n    \"notification_id\": \"{{ipn_id}}\",\n    \"billing_address\": {\n        \"email_address\": \"test@example.com\",\n        \"phone_number\": \"254700000000\",\n        \"country_code\": \"KE\",\n        \"first_name\": \"John\",\n        \"middle_name\": \"\",\n        \"last_name\": \"Doe\",\n        \"line_1\": \"123 Test Street\",\n        \"line_2\": \"\",\n        \"city\": \"Nairobi\",\n        \"state\": \"\",\n        \"postal_code\": \"\",\n        \"zip_code\": \"\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Transactions/SubmitOrderRequest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Transactions",
+								"SubmitOrderRequest"
+							]
+						},
+						"description": "Submit a payment order request. Returns a redirect URL for the customer to complete payment.\n\n**Required Fields:**\n- id: Your unique order reference (alphanumeric, max 50 chars)\n- currency: ISO currency code (KES, UGX, TZS, USD)\n- amount: Payment amount\n- description: Order description (max 100 chars)\n- callback_url: URL to redirect after payment\n- notification_id: IPN ID from registration\n- billing_address: Customer details (phone or email required)\n\n**Optional Fields:**\n- redirect_mode: TOP_WINDOW or PARENT_WINDOW\n- cancellation_url: URL if customer cancels\n- branch: Store/branch name"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"id\": \"ORD-12345\",\n    \"currency\": \"KES\",\n    \"amount\": 100.00,\n    \"description\": \"Test Payment\",\n    \"callback_url\": \"https://example.com/callback\",\n    \"notification_id\": \"84740ab4-3cd9-47da-8a4f-dd1db53494b5\",\n    \"billing_address\": {\n        \"phone_number\": \"254700000000\"\n    }\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/Transactions/SubmitOrderRequest",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"Transactions",
+										"SubmitOrderRequest"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"body": "{\n    \"order_tracking_id\": \"b945e4af-80a5-4ec1-8706-e03f8332fb04\",\n    \"merchant_reference\": \"ORD-12345\",\n    \"redirect_url\": \"https://cybqa.pesapal.com/pesapaliframe/PesapalIframe3/Index/?OrderTrackingId=b945e4af-80a5-4ec1-8706-e03f8332fb04\",\n    \"error\": null,\n    \"status\": \"200\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Submit Recurring Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has order_tracking_id', function () {",
+									"    pm.expect(jsonData).to.have.property('order_tracking_id');",
+									"});",
+									"",
+									"if (jsonData.order_tracking_id) {",
+									"    pm.collectionVariables.set('recurring_order_id', jsonData.order_tracking_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"var orderId = 'SUB-' + Date.now();",
+									"pm.collectionVariables.set('subscription_order_id', orderId);",
+									"",
+									"// Set dates for subscription",
+									"var today = new Date();",
+									"var endDate = new Date();",
+									"endDate.setFullYear(endDate.getFullYear() + 1);",
+									"",
+									"var formatDate = function(date) {",
+									"    var dd = String(date.getDate()).padStart(2, '0');",
+									"    var mm = String(date.getMonth() + 1).padStart(2, '0');",
+									"    var yyyy = date.getFullYear();",
+									"    return dd + '-' + mm + '-' + yyyy;",
+									"};",
+									"",
+									"pm.collectionVariables.set('subscription_start_date', formatDate(today));",
+									"pm.collectionVariables.set('subscription_end_date', formatDate(endDate));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{subscription_order_id}}\",\n    \"currency\": \"KES\",\n    \"amount\": 500.00,\n    \"description\": \"Monthly Subscription Payment\",\n    \"callback_url\": \"{{callback_url}}\",\n    \"notification_id\": \"{{ipn_id}}\",\n    \"billing_address\": {\n        \"email_address\": \"subscriber@example.com\",\n        \"phone_number\": \"254700000000\",\n        \"first_name\": \"John\",\n        \"last_name\": \"Subscriber\"\n    },\n    \"account_number\": \"ACCT-{{$randomInt}}\",\n    \"subscription_details\": {\n        \"start_date\": \"{{subscription_start_date}}\",\n        \"end_date\": \"{{subscription_end_date}}\",\n        \"frequency\": \"MONTHLY\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Transactions/SubmitOrderRequest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Transactions",
+								"SubmitOrderRequest"
+							]
+						},
+						"description": "Submit a recurring/subscription payment order. Customer can set up automated card payments.\n\n**Additional Required Fields:**\n- account_number: Customer account/invoice number\n\n**Optional Subscription Details:**\n- start_date: Format dd-MM-yyyy\n- end_date: Format dd-MM-yyyy\n- frequency: DAILY, WEEKLY, MONTHLY, or YEARLY\n\nNote: Currently only Visa and MasterCard support recurring payments."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has status_code', function () {",
+									"    pm.expect(jsonData).to.have.property('status_code');",
+									"});",
+									"",
+									"// Save confirmation code if payment completed",
+									"if (jsonData.confirmation_code) {",
+									"    pm.collectionVariables.set('confirmation_code', jsonData.confirmation_code);",
+									"    console.log('Confirmation code saved: ' + jsonData.confirmation_code);",
+									"}",
+									"",
+									"// Log payment status",
+									"var statusMap = {",
+									"    0: 'INVALID',",
+									"    1: 'COMPLETED',",
+									"    2: 'FAILED',",
+									"    3: 'REVERSED'",
+									"};",
+									"console.log('Payment Status: ' + (statusMap[jsonData.status_code] || 'UNKNOWN'));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/Transactions/GetTransactionStatus?orderTrackingId={{order_tracking_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Transactions",
+								"GetTransactionStatus"
+							],
+							"query": [
+								{
+									"key": "orderTrackingId",
+									"value": "{{order_tracking_id}}"
+								}
+							]
+						},
+						"description": "Check the status of a payment using the OrderTrackingId.\n\n**Status Codes:**\n- 0: INVALID - Transaction not found\n- 1: COMPLETED - Payment successful\n- 2: FAILED - Payment failed\n- 3: REVERSED - Payment reversed/refunded\n\n**Response includes:**\n- payment_method: Method used (Mpesa, Visa, etc.)\n- amount: Amount paid\n- confirmation_code: Payment confirmation code\n- payment_status_description: Status text\n- payment_account: Masked account/phone"
+					},
+					"response": [
+						{
+							"name": "Completed Payment",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/Transactions/GetTransactionStatus?orderTrackingId=b945e4af-80a5-4ec1-8706-e03f8332fb04",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"Transactions",
+										"GetTransactionStatus"
+									],
+									"query": [
+										{
+											"key": "orderTrackingId",
+											"value": "b945e4af-80a5-4ec1-8706-e03f8332fb04"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"body": "{\n    \"payment_method\": \"Mpesa\",\n    \"amount\": 100,\n    \"created_date\": \"2026-01-24T10:30:00.000Z\",\n    \"confirmation_code\": \"ABC123XYZ\",\n    \"payment_status_description\": \"Completed\",\n    \"description\": \"Test Payment\",\n    \"message\": \"Request processed successfully\",\n    \"payment_account\": \"254700***000\",\n    \"call_back_url\": \"https://example.com/callback?OrderTrackingId=b945e4af-80a5-4ec1-8706-e03f8332fb04\",\n    \"status_code\": 1,\n    \"merchant_reference\": \"ORD-12345\",\n    \"currency\": \"KES\",\n    \"error\": null,\n    \"status\": \"200\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Endpoints for creating and managing payment orders."
+		},
+		{
+			"name": "Refunds & Cancellations",
+			"item": [
+				{
+					"name": "Request Refund",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test('Response has status', function () {",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"});",
+									"",
+									"pm.test('Response has message', function () {",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});",
+									"",
+									"console.log('Refund Status: ' + jsonData.status);",
+									"console.log('Message: ' + jsonData.message);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"confirmation_code\": \"{{confirmation_code}}\",\n    \"amount\": \"100.00\",\n    \"username\": \"admin@example.com\",\n    \"remarks\": \"Customer requested refund - order cancelled\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Transactions/RefundRequest",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Transactions",
+								"RefundRequest"
+							]
+						},
+						"description": "Request a refund for a completed payment.\n\n**Limitations:**\n- Only COMPLETED payments can be refunded\n- Cannot refund more than original amount\n- Card payments: partial or full refund\n- Mobile payments: full refund only\n- Only one refund per payment\n\n**Required Fields:**\n- confirmation_code: From GetTransactionStatus\n- amount: Amount to refund\n- username: Identity of person requesting\n- remarks: Reason for refund\n\n**Note:** Status 200 means request received, not processed. Merchant approval required."
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"confirmation_code\": \"ABC123XYZ\",\n    \"amount\": \"100.00\",\n    \"username\": \"admin@example.com\",\n    \"remarks\": \"Customer requested refund\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/Transactions/RefundRequest",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"Transactions",
+										"RefundRequest"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"body": "{\n    \"status\": \"200\",\n    \"message\": \"Refund request successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Cancel Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test('Response has status', function () {",
+									"    pm.expect(jsonData).to.have.property('status');",
+									"});",
+									"",
+									"pm.test('Response has message', function () {",
+									"    pm.expect(jsonData).to.have.property('message');",
+									"});",
+									"",
+									"console.log('Cancel Status: ' + jsonData.status);",
+									"console.log('Message: ' + jsonData.message);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{auth_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"order_tracking_id\": \"{{order_tracking_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/Transactions/CancelOrder",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"Transactions",
+								"CancelOrder"
+							]
+						},
+						"description": "Cancel a pending or failed order.\n\n**Limitations:**\n- Only FAILED or PENDING orders can be cancelled\n- Cannot cancel completed payments\n- Only one cancellation per order\n\n**Required:**\n- order_tracking_id: Pesapal order tracking ID\n\n**Note:** Use this to prevent customers from making payments to cancelled orders."
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"order_tracking_id\": \"b945e4af-80a5-4ec1-8706-e03f8332fb04\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/Transactions/CancelOrder",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"Transactions",
+										"CancelOrder"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"body": "{\n    \"status\": \"200\",\n    \"message\": \"Order successfully cancelled.\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Endpoints for refunds and order cancellations."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script",
+					"// Check if auth token exists and is not expired",
+					"// You can add token refresh logic here"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"pm.test('Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(10000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://cybqa.pesapal.com/pesapalv3",
+			"type": "string",
+			"description": "Sandbox: https://cybqa.pesapal.com/pesapalv3 | Live: https://pay.pesapal.com/v3"
+		},
+		{
+			"key": "consumer_key",
+			"value": "your_consumer_key",
+			"type": "string",
+			"description": "Your Pesapal consumer key - REPLACE WITH YOUR OWN"
+		},
+		{
+			"key": "consumer_secret",
+			"value": "your_consumer_secret",
+			"type": "string",
+			"description": "Your Pesapal consumer secret - REPLACE WITH YOUR OWN"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string",
+			"description": "Auto-populated after running Get Auth Token request"
+		},
+		{
+			"key": "ipn_id",
+			"value": "",
+			"type": "string",
+			"description": "Auto-populated after registering IPN URL"
+		},
+		{
+			"key": "ipn_callback_url",
+			"value": "https://example.com/ipn-handler",
+			"type": "string",
+			"description": "Your IPN webhook URL - must be publicly accessible"
+		},
+		{
+			"key": "callback_url",
+			"value": "https://example.com/payment-callback",
+			"type": "string",
+			"description": "URL to redirect customer after payment"
+		},
+		{
+			"key": "order_tracking_id",
+			"value": "",
+			"type": "string",
+			"description": "Auto-populated after submitting an order"
+		},
+		{
+			"key": "confirmation_code",
+			"value": "",
+			"type": "string",
+			"description": "Auto-populated from completed payment status"
+		}
+	]
+}
