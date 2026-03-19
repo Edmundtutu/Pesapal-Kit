@@ -143,7 +143,7 @@ function _config()
     $config->endpoints->cancelOrder = env('PESAPAL_CANCEL_ORDER_ENDPOINT', '/api/Transactions/CancelOrder');
     
     // Default Values
-    $config->currency = env('PESAPAL_CURRENCY', 'KES');
+    $config->currency = env('PESAPAL_CURRENCY', 'UGX');
     $config->redirectMode = env('PESAPAL_REDIRECT_MODE', 'PARENT_WINDOW');
     $config->ipnNotificationType = env('PESAPAL_IPN_NOTIFICATION_TYPE', 'POST');
     
